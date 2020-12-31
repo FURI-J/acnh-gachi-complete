@@ -3,13 +3,13 @@ import "@firebase/auth";
 import "firebase/firestore";
 
 var config = {
-  apiKey: "AIzaSyD-N7qRjygk28zMZ2JSAxROBg_MV8dwe9s",
-  authDomain: "acnh-gachi-complete.firebaseapp.com",
-  databaseURL: "https://acnh-gachi-complete.firebaseio.com",
-  projectId: "acnh-gachi-complete",
-  storageBucket: "acnh-gachi-complete.appspot.com",
-  messagingSenderId: "281864586378",
-  appId: "1:281864586378:web:c362cf8f36675c36c89973"
+  apiKey: "AIzaSyAcYscykd9Nspa4JJD2vreXGrJqpZOhmbg",
+  authDomain: "acnh-gachi-complete-furi-j.firebaseapp.com",
+  databaseURL: "https://acnh-gachi-complete-furi-j.firebaseio.com",
+  projectId: "acnh-gachi-complete-furi-j",
+  storageBucket: "acnh-gachi-complete-furi-j.appspot.com",
+  messagingSenderId: "194416290134",
+  appId: "1:194416290134:web:b6d594946c360fd095cef7"
 };
 
 firebase.initializeApp(config);
