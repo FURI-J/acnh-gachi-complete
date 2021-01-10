@@ -7,7 +7,7 @@
           <button
             type="button"
             class="dropdown-btn"
-            :class="{ active: isOpenSaleFilter }"
+            :class="{ active: isOpenSaleFilter() }"
           >
             <span v-if="filter.saleFilter === 'all'">すべて</span>
             <span v-else-if="filter.saleFilter === 'catalog'"
@@ -19,6 +19,7 @@
             <span v-else-if="filter.saleFilter === 'kicks'">シャンク</span>
             <span v-else-if="filter.saleFilter === 'labelle'">ことの</span>
             <span v-else-if="filter.saleFilter === 'daly'">日替わり</span>
+            <span v-else-if="filter.saleFilter === 'recycle'">リサイクル</span>
             <img src="../assets/arrow.svg" width="12" alt="" />
           </button>
         </div>
@@ -42,6 +43,9 @@
             <DropdownItem @click="onClickSaleFilter('daly')">
               <span class="tg">日替わり</span>
             </DropdownItem>
+            <DropdownItem @click="onClickSaleFilter('recycle')">
+              <span class="tg">リサイクル</span>
+            </DropdownItem>
           </template>
           <DropdownItem @click="onClickSaleFilter('diy')">
             <span class="tg">DIY</span>
@@ -62,7 +66,7 @@
         <button
           type="button"
           class="dropdown-btn"
-          :class="{ active: isOpenCollectedFilter }"
+          :class="{ active: isOpenCollectedFilter() }"
         >
           <span class="tg" v-if="filter.collectedFilter === '0'">すべて</span>
           <span class="tg tg-gr" v-else-if="filter.collectedFilter === '1'"
@@ -107,7 +111,7 @@
           <button
             type="button"
             class="dropdown-btn"
-            :class="{ active: isOpenBatchMenu }"
+            :class="{ active: isOpenBatchMenu() }"
           >
             <span class="tg">操作...</span>
             <img src="../assets/arrow.svg" width="12" alt="" />
@@ -322,18 +326,6 @@ export default {
         this.currentNav === "housewares-nookmiles" ||
         this.currentNav === "achievements"
       );
-    },
-    isOpenSaleFilter() {
-      if (!this.$refs.saleFilter) return false;
-      return this.$refs.saleFilter.showPopper;
-    },
-    isOpenCollectedFilter() {
-      if (!this.$refs.collectedFilter) return false;
-      return this.$refs.collectedFilter.showPopper;
-    },
-    isOpenBatchMenu() {
-      if (!this.$refs.batchActionPopper) return false;
-      return this.$refs.batchActionPopper.showPopper;
     }
   },
   mounted() {
@@ -383,6 +375,18 @@ export default {
       this.twitterURL = `https://ysds.github.io/acnh-gachi-complete/share2/${this.currentNav}/?uid=${this.user.uid}`;
       this.$copyText(shareURL);
       this.isShowShareModal = true;
+    },
+    isOpenSaleFilter() {
+      if (!this.$refs.saleFilter) return false;
+      return this.$refs.saleFilter.showPopper;
+    },
+    isOpenCollectedFilter() {
+      if (!this.$refs.collectedFilter) return false;
+      return this.$refs.collectedFilter.showPopper;
+    },
+    isOpenBatchMenu() {
+      if (!this.$refs.batchActionPopper) return false;
+      return this.$refs.batchActionPopper.showPopper;
     }
   }
 };

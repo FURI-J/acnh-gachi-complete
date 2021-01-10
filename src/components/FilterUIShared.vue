@@ -1,6 +1,6 @@
 <template>
   <div class="wrapper">
-    <div v-if="showSaleFilter">
+    <div v-show="showSaleFilter">
       <popper trigger="clickToToggle" :visible-arrow="false" ref="saleFilter">
         <div slot="reference" style="position: relative;">
           <div class="btn-label">取得方法</div>
@@ -19,6 +19,7 @@
             <span v-else-if="filter.saleFilter === 'kicks'">シャンク</span>
             <span v-else-if="filter.saleFilter === 'labelle'">ことの</span>
             <span v-else-if="filter.saleFilter === 'daly'">日替わり</span>
+            <span v-else-if="filter.saleFilter === 'recycle'">リサイクル</span>
             <img src="../assets/arrow.svg" width="12" alt="" />
           </button>
         </div>
@@ -41,6 +42,9 @@
             </DropdownItem>
             <DropdownItem @click="onClickSaleFilter('daly')">
               <span class="tg">日替わり</span>
+            </DropdownItem>
+            <DropdownItem @click="onClickSaleFilter('recycle')">
+              <span class="tg">リサイクル</span>
             </DropdownItem>
           </template>
           <DropdownItem @click="onClickSaleFilter('diy')">
@@ -141,7 +145,7 @@ export default {
   },
   computed: {
     isFashion() {
-      return this.currentNav.indexOf("fashion") > -1;
+      return this.currentNav && this.currentNav.indexOf("fashion") > -1;
     },
     isShowOrderChanger() {
       return (
