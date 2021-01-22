@@ -1,5 +1,27 @@
 <template>
-  <div>
+  <Card title="一括シェア">
+    <div class="link">
+      <a :href="`${baseURL}shares/?uid=${user.uid}`"
+        >https://ysds.github.io/acnh-gachi-complete/shares/?uid={{
+          user.uid
+        }}</a
+      >
+    </div>
+    <div class="mb-4" style="text-align: center;">
+      <Button
+        cta
+        :href="
+          `https://twitter.com/intent/tweet?text=取得状況%0ahttps://ysds.github.io/acnh-gachi-complete/shares/?uid=${user.uid}%0a%0a%23あつ森ガチコンプ`
+        "
+      >
+        Twitter に投稿する
+      </Button>
+    </div>
+    <p class="small">
+      この URL
+      を他の人に伝えることで、任意のカテゴリを一括でシェアできます。公開したいカテゴリを以下から選択してください。
+    </p>
+
     <div style="text-align: center;">
       <Button
         v-if="!isOpen"
@@ -10,17 +32,12 @@
       </Button>
       <div v-else style="margin-bottom: .5rem;">
         <div>
-          <button class="edit-btn" type="button" @click="cancel">
+          <Button secondary form @click="cancel">
             キャンセル
-          </button>
-          <button
-            class="edit-btn"
-            type="button"
-            @click="save"
-            style="margin-left: 1rem;"
-          >
+          </Button>
+          <Button primary form @click="save" style="margin-left: 1rem;">
             保存
-          </button>
+          </Button>
         </div>
         <p class="message">変更を反映するには保存を押してください。</p>
       </div>
@@ -42,7 +59,7 @@
         </div>
       </div>
     </div>
-  </div>
+  </Card>
 </template>
 
 <script>
@@ -51,20 +68,24 @@ import { navs } from "../utils/nav.js";
 
 import VSwitch from "../components/VSwitch";
 import Button from "../components/Button";
+import Card from "../components/Card";
 
 const db = firebase.firestore();
+const baseURL = process.env.BASE_URL;
 
 export default {
   name: "LoginShare",
   components: {
     VSwitch,
-    Button
+    Button,
+    Card
   },
   data() {
     return {
       navs: navs,
       isOpen: false,
-      checks: []
+      checks: [],
+      baseURL
     };
   },
   computed: {
@@ -97,6 +118,10 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.link {
+  word-break: break-all;
+}
+
 .group:not(:last-child) {
   border-bottom: 3px solid #ccc;
 }
@@ -117,17 +142,6 @@ export default {
   &.active svg {
     transform: rotate(180deg);
   }
-}
-
-.edit-btn {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  background-color: #fff;
-  font-weight: 700;
-  font-size: 14px;
-  line-height: 1.3;
-  color: #42b983;
 }
 
 .message {

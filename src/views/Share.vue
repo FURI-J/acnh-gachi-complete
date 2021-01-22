@@ -10,50 +10,41 @@
         </template>
       </Button>
     </div>
-    <h1 v-if="!isShares" class="header">
-      <span class="header-lg">{{ navText }}</span>
-      <div class="header-sm" v-if="isLoaded">
-        <SharedUserName
-          :sharedUserName="sharedUserName"
-          :sharedIslandName="sharedIslandName"
-        />
-      </div>
+    <h1 v-if="!isShares" class="heading">
+      {{ navText }}
     </h1>
-    <div v-else>
-      <div class="nav-wrapper">
-        <nav class="nav">
-          <button
-            type="button"
-            class="nav-item"
-            :class="{ active: nav === category }"
-            v-for="category in sharedShareCategories"
-            :key="category"
-            @click="changeNav(category)"
-          >
-            {{ getNavText(category) }}
-          </button>
-        </nav>
-      </div>
-      <div class="header-sm" v-if="isLoaded">
-        <SharedUserName
-          :sharedUserName="sharedUserName"
-          :sharedIslandName="sharedIslandName"
+    <div v-else class="nav-wrapper">
+      <nav class="nav">
+        <button
+          type="button"
+          class="nav-item"
+          :class="{ active: nav === category }"
+          v-for="category in sharedShareCategories"
+          :key="category"
+          @click="changeNav(category)"
+        >
+          {{ getNavText(category) }}
+        </button>
+      </nav>
+    </div>
+    <SharedUserName
+      v-if="isLoaded"
+      :sharedUserName="sharedUserName"
+      :sharedIslandName="sharedIslandName"
+      style="padding: 0.5rem 1rem;"
+    />
+    <div class="d-flex">
+      <div class="toolbar">
+        <ToolbarFilter
+          isShareView
+          :filter="filter"
+          :activeNav="nav"
+          @change="onChangeFilter"
         />
       </div>
     </div>
-    <div class="filter">
-      <FilterUIShared
-        :filter="filter"
-        :showSaleFilter="isShowSaleFilter"
-        :currentNav="nav"
-        @change="onChangeFilter"
-      />
-      <div v-show="parseInt(filter.collectedFilter, 10) < 5">
-        <CollectedBar
-          :totalValue="getTotalLength()"
-          :value="getCollectedLength()"
-        />
-      </div>
+    <div class="mb-5" v-show="parseInt(filter.collectedFilter, 10) < 5">
+      <CollectedBar :totalValue="totalLength" :value="collectedLength" />
     </div>
     <template v-if="!isLogin && parseInt(filter.collectedFilter, 10) > 4">
       <div class="description">
@@ -118,12 +109,12 @@ import {
   totalLength,
   collectedLength,
   getNavText,
-  navs,
-  isFilterBySaleType
+  navs
 } from "../utils/nav.js";
+import { isAvailableFilter } from "../utils/filter";
 
 import Item from "../components/Item.vue";
-import FilterUIShared from "../components/FilterUIShared.vue";
+import ToolbarFilter from "../components/ToolbarFilter.vue";
 import CollectedBar from "../components/CollectedBar.vue";
 import Login from "../components/Login.vue";
 import Button from "../components/Button.vue";
@@ -136,7 +127,7 @@ const db = firebase.firestore();
 export default {
   components: {
     Item,
-    FilterUIShared,
+    ToolbarFilter,
     CollectedBar,
     Login,
     Button,
@@ -148,7 +139,7 @@ export default {
     return {
       nav: null,
       filter: {
-        saleFilter: "all",
+        typeFilter: "all",
         collectedFilter: "0",
         viewMode: "tile",
         order: "id"
@@ -219,17 +210,27 @@ export default {
     myShareCategories() {
       return this.$store.getters.shareCategories;
     },
-    isShowSaleFilter() {
-      return isFilterBySaleType(this.nav);
-    },
     isLogin() {
       return this.$store.getters.isLogin;
     },
-    navText: function() {
+    navText() {
       return getNavText(this.nav);
     },
     isShares() {
       return this.$route.name === "Shares";
+    },
+    totalLength() {
+      return totalLength({
+        nav: this.nav,
+        typeFilter: this.filter.typeFilter
+      });
+    },
+    collectedLength() {
+      return collectedLength({
+        collected: Object.assign({}, this.sharedCollected),
+        nav: this.nav,
+        typeFilter: this.filter.typeFilter
+      });
     }
   },
   mounted() {
@@ -337,26 +338,11 @@ export default {
       this.isShowModal = true;
       this.modalItem = item;
     },
-    getTotalLength: function() {
-      return totalLength({
-        nav: this.nav,
-        saleFilter: this.filter.saleFilter
-      });
-    },
-    getCollectedLength: function() {
-      return collectedLength({
-        collected: Object.assign({}, this.sharedCollected),
-        nav: this.nav,
-        saleFilter: this.filter.saleFilter
-      });
-    },
     changeNav(category) {
-      // Reset saleFilter
-      const prevCategory = this.nav.split("-")[0];
-      if (category.indexOf(prevCategory) === -1) {
-        this.filter.saleFilter = "all";
+      // Reset typeFilter
+      if (isAvailableFilter(this.activeNav, this.filter.typeFilter)) {
+        this.filter.typeFilter = "all";
       }
-
       this.nav = category;
       this.updateShowItems();
     },
@@ -417,7 +403,7 @@ export default {
   }
 }
 
-.header {
+.heading {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -425,24 +411,8 @@ export default {
   font-size: 28px;
   font-weight: 700;
   word-break: break-all;
-}
-
-.header-lg {
-  display: inline-flex;
-  padding: 0.1rem 0 0.1rem 1rem;
+  padding: 0 1rem;
   color: #000;
-}
-
-.header-sm {
-  margin: 0.5rem 0;
-  font-size: 15px;
-  font-weight: 700;
-  color: #555;
-  padding: 0.1rem 0.5rem;
-}
-
-.filter {
-  margin-bottom: 1.5rem;
 }
 
 .items {
@@ -477,14 +447,18 @@ export default {
   }
 }
 
+.toolbar {
+  margin: 0 auto;
+}
+
 .description {
   text-align: center;
   font-weight: 700;
   font-size: 14px;
   background-color: #eee;
   padding: 0.5rem;
-  margin-top: -12px;
-  margin-bottom: 14px;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
 }
 
 .avatar {
@@ -495,10 +469,6 @@ export default {
 
 .nav-wrapper {
   display: flex;
-
-  ~ .header-sm {
-    margin-top: 0;
-  }
 }
 
 .nav {

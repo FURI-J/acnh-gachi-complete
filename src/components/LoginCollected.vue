@@ -1,5 +1,5 @@
 <template>
-  <div class="wrapper">
+  <Card title="コンプ率">
     <div v-if="!isLoadComplete">
       計算中...
     </div>
@@ -8,7 +8,7 @@
         <LoginCollectedBar
           text="全体"
           :value="allCollectedLength"
-          :totalValue="allLength"
+          :totalValue="allTotalLength"
           :isAll="true"
         />
       </div>
@@ -35,7 +35,7 @@
     <p class="note">
       一部のカテゴリに「素材」や「消費アイテム」、「植物」が例外的に含まれていますが、これらのコンプ状況は「全体」のコンプ率の計算対象には含まれていません。
     </p>
-  </div>
+  </Card>
 </template>
 
 <script>
@@ -43,9 +43,10 @@ import {
   navs,
   totalLength,
   collectedLength,
-  allLength,
+  allTotalLength,
   allCollectedLength
 } from "../utils/nav";
+import Card from "./Card";
 import LoginCollectedBar from "./LoginCollectedBar";
 
 export default {
@@ -54,12 +55,13 @@ export default {
       isLoadComplete: null,
       totalLengths: null,
       collectedLengths: null,
-      allLength: null,
+      allTotalLength: null,
       allCollectedLength: null,
       navs: navs
     };
   },
   components: {
+    Card,
     LoginCollectedBar
   },
   computed: {
@@ -71,7 +73,7 @@ export default {
     setTimeout(() => {
       this.totalLengths = this.getLengths();
       this.collectedLengths = this.getLengths(true);
-      this.allLength = allLength();
+      this.allTotalLength = allTotalLength();
       this.allCollectedLength = allCollectedLength(this.collected);
       this.isLoadComplete = true;
     }, 0);
@@ -81,16 +83,18 @@ export default {
       const result = {};
       navs.forEach(nav => {
         const subnavs = nav.subnavs;
+        const collected = this.collected;
+        const typeFilter = "0";
         if (subnavs) {
           subnavs.forEach(subnav => {
             result[subnav.id] = isCollected
-              ? collectedLength({ nav: subnav.id, collected: this.collected })
-              : totalLength({ nav: subnav.id });
+              ? collectedLength({ nav: subnav.id, collected, typeFilter })
+              : totalLength({ nav: subnav.id, typeFilter });
           });
         } else {
           result[nav.id] = isCollected
-            ? collectedLength({ nav: nav.id, collected: this.collected })
-            : totalLength({ nav: nav.id });
+            ? collectedLength({ nav: nav.id, collected, typeFilter })
+            : totalLength({ nav: nav.id, typeFilter });
         }
       });
       return result;

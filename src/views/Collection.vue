@@ -36,22 +36,22 @@
       v-show="!isSearchMode && activeNav"
     />
     <div v-show="!isSearchMode && activeNav">
-      <FilterUI
-        :filter="filter"
-        :showSaleFilter="isShowSaleFilter"
-        :showPinOption="isShowPinOption"
-        :showShareButton="isLogin"
-        :currentNav="activeNav"
-        :pins="pins"
-        @change="onChangeFilter"
-        @clickBatchAction="onClickItemCheckBatchAction"
-        @clickCopyName="onClickCopyName"
-        @changePin="onChangePin"
-      />
-      <CollectedBar
-        :totalValue="getTotalLength()"
-        :value="getCollectedLength()"
-      />
+      <div class="d-flex">
+        <div class="toolbar">
+          <ToolbarFilter
+            :filter="filter"
+            :activeNav="activeNav"
+            @change="onChangeFilter"
+          />
+          <ToolbarShare v-if="isLogin" />
+          <ToolbarPin :pins="pins" @changePin="onChangePin" />
+          <ToolbarBatch
+            @clickCopyName="onClickCopyName"
+            @clickBatchAction="onClickItemCheckBatchAction"
+          />
+        </div>
+      </div>
+      <CollectedBar :totalValue="totalLength" :value="collectedLength" />
     </div>
     <ul
       class="items"
@@ -102,6 +102,8 @@
         <div slot="body"><ItemModalContent :modalItem="modalItem" /></div>
       </template>
     </Modal>
+    <portal-target name="shareModal"></portal-target>
+    <portal-target name="batchModal"></portal-target>
     <Login v-if="isOpenLogin" @close="isOpenLogin = false" />
   </div>
 </template>
@@ -111,15 +113,18 @@ import {
   filterItems,
   navs,
   totalLength,
-  collectedLength,
-  isFilterBySaleType
+  collectedLength
 } from "../utils/nav.js";
+import { isAvailableFilter } from "../utils/filter";
 
 import SubNav from "../components/SubNav.vue";
 import Login from "../components/Login.vue";
 import Button from "../components/Button.vue";
 import SearchBox from "../components/SearchBox.vue";
-import FilterUI from "../components/FilterUI.vue";
+import ToolbarFilter from "../components/ToolbarFilter.vue";
+import ToolbarShare from "../components/ToolbarShare.vue";
+import ToolbarPin from "../components/ToolbarPin.vue";
+import ToolbarBatch from "../components/ToolbarBatch.vue";
 import Item from "../components/Item.vue";
 import Modal from "../components/Modal.vue";
 import CollectedBar from "../components/CollectedBar.vue";
@@ -132,7 +137,10 @@ export default {
     Login,
     Button,
     SearchBox,
-    FilterUI,
+    ToolbarFilter,
+    ToolbarShare,
+    ToolbarPin,
+    ToolbarBatch,
     Item,
     Modal,
     CollectedBar,
@@ -141,13 +149,14 @@ export default {
   data() {
     return {
       filter: {
-        saleFilter: null,
+        typeFilter: null,
         collectedFilter: null,
         viewMode: null,
         order: null
       },
       showItems: [],
       resultItems: [],
+      resultVariations: {},
       queueItems: [],
       isSearchMode: false,
       renderStartDate: new Date().getTime(),
@@ -179,28 +188,29 @@ export default {
     islandName() {
       return this.$store.getters.islandName;
     },
-    isShowSaleFilter() {
-      return isFilterBySaleType(this.activeNav);
-    },
-    isShowPinOption() {
-      if (this.activeNav) {
-        const showNavs = ["special", "season"];
-        for (let i = 0; i < showNavs.length; i++) {
-          if (this.activeNav.indexOf(showNavs[i]) !== -1) return true;
-        }
-      }
-      return false;
-    },
     isVersion() {
       if (this.activeNav) {
         if (this.activeNav.indexOf("versions") !== -1) return true;
       }
       return false;
+    },
+    totalLength() {
+      return totalLength({
+        nav: this.activeNav,
+        typeFilter: this.filter.typeFilter
+      });
+    },
+    collectedLength() {
+      return collectedLength({
+        collected: Object.assign({}, this.collected),
+        nav: this.activeNav,
+        typeFilter: this.filter.typeFilter
+      });
     }
   },
   watch: {
-    activeNav(nav, prev) {
-      this.onChangeNav(nav, prev);
+    activeNav() {
+      this.onChangeNav();
     }
   },
   async mounted() {
@@ -217,8 +227,8 @@ export default {
         self.$vlf.getItem("pins")
       ]);
 
-      if (filter && filter.saleFilter === null) {
-        filter.saleFilter = "all";
+      if (filter && filter.typeFilter === null) {
+        filter.typeFilter = "all";
       }
       if (filter && filter.collectedFilter === null) {
         filter.collectedFilter = "0";
@@ -229,13 +239,13 @@ export default {
       if (filter && filter.order === null) {
         filter.order = "name";
       }
-      if (filter && filter.saleFilter && filter.saleFilter.match(/[012345]/g)) {
-        filter.saleFilter = "all";
+      if (filter && filter.typeFilter && filter.typeFilter.match(/[012345]/g)) {
+        filter.typeFilter = "all";
       }
 
       this.filter = Object.assign(
         {
-          saleFilter: "all",
+          typeFilter: "all",
           collectedFilter: "0",
           viewMode: "tile",
           order: "name"
@@ -271,31 +281,42 @@ export default {
     onClickItemCheckBatchAction: function(value) {
       let items = [];
       let collectedArray = [];
-      const resultItems = this.resultItems;
-      for (let i = 0; i < resultItems.length; i++) {
-        items.push(resultItems[i].uniqueEntryId || resultItems[i].name);
+      let self = this;
+      function collectedValue(values, index) {
+        return values.length > 0 ? values.charAt(index) : "";
       }
-      for (let i = 0; i < items.length; i++) {
-        if (value === "allCollected") {
-          if (resultItems[i].uniqueEntryId) {
-            collectedArray.push("0");
-          } else {
-            collectedArray.push(
-              "0123456789".slice(0, resultItems[i].variants.length)
-            );
-          }
-        } else if (value === "allProvidable") {
-          if (resultItems[i].uniqueEntryId) {
-            collectedArray.push("A");
-          } else {
-            collectedArray.push(
-              "ABCDEFGHIJ".slice(0, resultItems[i].variants.length)
-            );
-          }
-        } else {
-          collectedArray.push("");
+      function createVariationCollected(item, values) {
+        const collected = self.disassembleCollected(item);
+        if (
+          self.filter.viewMode === "list" ||
+          self.filter.collectedFilter === "0"
+        ) {
+          // リストビュー or タイルビューの「すべて」：全バリエーションを更新
+          [...Array(item.variants.length).keys()].forEach(
+            i => (collected[i] = collectedValue(values, i))
+          );
+        } else if (self.resultVariations[item.name]) {
+          // タイルビューの「すべて」以外：表示中バリエーションを更新
+          self.resultVariations[item.name].forEach(
+            i => (collected[i] = collectedValue(values, i))
+          );
         }
+        return collected.join("");
       }
+      this.resultItems.forEach(item => {
+        items.push(item.uniqueEntryId || item.name);
+        let values = "";
+        if (value === "allCollected") {
+          values = "0123456789";
+        } else if (value === "allProvidable") {
+          values = "ABCDEFGHIJ";
+        }
+        if (item.uniqueEntryId) {
+          collectedArray.push(collectedValue(values, 0));
+        } else {
+          collectedArray.push(createVariationCollected(item, values));
+        }
+      });
       this.$store.commit("updateLocalCollectedDataBatch", {
         items,
         collectedArray
@@ -314,15 +335,13 @@ export default {
       }
       this.$copyText(names);
     },
-    onChangeNav: function(activeNav, prevNav) {
-      // Reset saleFilter
-      if (prevNav) {
-        const prevCategory = prevNav.split("-")[0];
-        if (activeNav.indexOf(prevCategory) === -1) {
-          this.filter.saleFilter = "all";
-          this.$vlf.setItem("filter", this.filter);
-        }
+    onChangeNav() {
+      // Reset typeFilter
+      if (isAvailableFilter(this.activeNav, this.filter.typeFilter)) {
+        this.filter.typeFilter = "all";
+        this.$vlf.setItem("filter", this.filter);
       }
+
       this.updateShowItems();
     },
     onChangeView: function() {
@@ -361,18 +380,14 @@ export default {
         ? this.collected[item.uniqueEntryId]
         : this.collected[item.name];
     },
-    getTotalLength: function() {
-      return totalLength({
-        nav: this.activeNav,
-        saleFilter: this.filter.saleFilter
+    disassembleCollected: function(item) {
+      // collectedを分解して配列にする
+      const collected = new Array(item.variants.length).fill("");
+      (this.collected[item.name] || "").split("").forEach(c => {
+        // 未取得アイテム以外の取得状態を設定
+        collected[!isNaN(c) ? parseInt(c, 10) : c.charCodeAt() - 65] = c;
       });
-    },
-    getCollectedLength: function() {
-      return collectedLength({
-        collected: Object.assign({}, this.collected),
-        nav: this.activeNav,
-        saleFilter: this.filter.saleFilter
-      });
+      return collected;
     },
     updateShowItems: function() {
       this.isLoadComplete = false;
@@ -383,6 +398,37 @@ export default {
         isSearchMode: this.isSearchMode,
         searchText: this.searchText
       });
+
+      // 表示対象バリエーションのインデックスを保持する
+      this.resultVariations = {};
+      this.resultItems
+        .filter(item => !item.uniqueEntryId)
+        .map(item => {
+          const collected = this.disassembleCollected(item);
+          let indexes = [];
+          if (this.filter.collectedFilter === "1") {
+            // 取得済
+            collected.forEach((c, i) => {
+              if (c.match(/[0-9]/)) indexes.push(i);
+            });
+          } else if (this.filter.collectedFilter === "2") {
+            // 配布可
+            collected.forEach((c, i) => {
+              if (c.match(/[A-J]/)) indexes.push(i);
+            });
+          } else if (this.filter.collectedFilter === "3") {
+            // 取＋配
+            collected.forEach((c, i) => {
+              if (c.match(/[0-9A-J]/)) indexes.push(i);
+            });
+          } else if (this.filter.collectedFilter === "4") {
+            // 未取得
+            collected.forEach((c, i) => {
+              if (c === "") indexes.push(i);
+            });
+          }
+          if (indexes.length) this.resultVariations[item.name] = indexes;
+        });
 
       this.showItems = [];
       this.renderStartDate = new Date().getTime();
@@ -493,5 +539,19 @@ export default {
   width: 32px;
   height: 32px;
   border-radius: 50%;
+}
+
+.toolbar {
+  display: flex;
+  margin: 0 auto;
+  padding: 0 0 0.5rem 1rem;
+  overflow-x: auto;
+  line-height: 1;
+  -webkit-overflow-scrolling: touch;
+
+  &::after {
+    content: "";
+    padding-left: 1rem;
+  }
 }
 </style>
