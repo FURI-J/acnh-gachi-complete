@@ -13,6 +13,9 @@
     <h1 v-if="!isShares" class="heading">
       {{ navText }}
     </h1>
+    <h1 v-else-if="sharedShareCategories.lenght === 0" class="heading">
+      全取得状況
+    </h1>
     <div v-else class="nav-wrapper">
       <nav class="nav">
         <button
@@ -43,22 +46,20 @@
         />
       </div>
     </div>
-    <div class="mb-5" v-show="parseInt(filter.collectedFilter, 10) < 5">
+    <div v-show="parseInt(filter.collectedFilter, 10) <= 4" class="mb-5">
       <CollectedBar :totalValue="totalLength" :value="collectedLength" />
     </div>
-    <template v-if="!isLogin && parseInt(filter.collectedFilter, 10) > 4">
-      <div class="description">
+    <div v-show="parseInt(filter.collectedFilter, 10) > 4" class="description">
+      <div v-if="!isLogin">
         ログインすると自分のデータと比較できます。
       </div>
-    </template>
-    <template v-else>
-      <div class="description" v-show="filter.collectedFilter === '5'">
+      <div v-show="filter.collectedFilter === '5'">
         相手が配布可で自分が未取得のアイテム
       </div>
-      <div class="description" v-show="filter.collectedFilter === '6'">
+      <div v-show="filter.collectedFilter === '6'">
         相手が未取得で自分が配布可のアイテム
       </div>
-    </template>
+    </div>
     <ul
       class="items"
       :class="{ tiles: filter.viewMode === 'tile' }"
@@ -112,6 +113,7 @@ import {
   navs
 } from "../utils/nav.js";
 import { isAvailableFilter } from "../utils/filter";
+import { syncCollectedData } from "../utils/db.js";
 
 import Item from "../components/Item.vue";
 import ToolbarFilter from "../components/ToolbarFilter.vue";
@@ -231,29 +233,19 @@ export default {
         nav: this.nav,
         typeFilter: this.filter.typeFilter
       });
+    },
+    isDoneSyncCloudFirstTime() {
+      return this.$store.getters.isDoneSyncCloudFirstTime;
     }
   },
   mounted() {
     this.loadOtherFirebaseData();
 
-    // if (this.sharedCollected === null) {
-    //   console.log(1);
-    //   this.loadOtherFirebaseData();
-    // }
-    // // 自分のページを表示したとき（ブラウザバック）
-    // else if (this.myUser && this.myUser.uid === this.sharedUid) {
-    //   console.log(2);
-    //   this.$store.commit("updateSharedCollected", this.myCollected);
-    //   this.$store.commit("updateSharedUserName", this.myUserName);
-    //   this.$store.commit("updateSharedShareCategories", this.myShareCategories);
-    //   this.finishMounted(this.myShareCategorie);
-    // }
-    // // 他人のページを初期表示したとき（ブラウザバック）
-    // else {
-    //   console.log(3);
-
-    //   this.finishMounted(this.sharedShareCategories);
-    // }
+    // シェアページを直接開いたときは同期処理を実行しないが、
+    // ブラウザナビゲーションなどシェアダイアログを通らないケースを考慮
+    if (this.isDoneSyncCloudFirstTime) {
+      syncCollectedData();
+    }
   },
   watch: {
     myCollected() {
