@@ -1,7 +1,7 @@
 <template>
   <li :class="filter.viewMode === 'list' ? 'item' : 'tile'">
     <template v-if="filter.viewMode === 'list'">
-      <div v-long-press style="position: relative;">
+      <div class="item-img-block" v-long-press>
         <img v-lazy="itemImage" class="item-img" />
         <img
           class="item-img-remake"
@@ -58,7 +58,6 @@
             :value="getChecks(index)"
             :variant="item.variants[index]"
             :variants="item.variants"
-            :isStatic="isStatic"
             :isRemake="
               item.customize || item.bodyCustomize || item.patternCustomize
             "
@@ -73,7 +72,6 @@
             :image="itemImage"
             :value="getChecks(0)"
             :isRecipe="item.sourceSheet === 'Recipes'"
-            :isStatic="isStatic"
             :isRemake="
               item.customize || item.bodyCustomize || item.patternCustomize
             "
@@ -89,6 +87,7 @@
 import CheckForList from "./CheckForList";
 import CheckForTile from "./CheckForTile";
 import stampUrls from "../mixins/stampUrls";
+import { toDisplayItemName } from "../utils/nav";
 
 export default {
   name: "Item",
@@ -132,16 +131,7 @@ export default {
   },
   computed: {
     itemName() {
-      // 島名を置換
-      if (
-        this.islandName &&
-        (this.item.name === "(island name) Icons" ||
-          this.item.name === "(island name) Miles!")
-      ) {
-        return this.item.displayName.replace("○○", this.islandName);
-      } else {
-        return this.item.displayName;
-      }
+      return toDisplayItemName(this.item, this.islandName);
     },
     itemImage() {
       const item = this.item;
@@ -295,7 +285,7 @@ export default {
       return result;
     },
     onChangeCheck: function(index) {
-      if (!this.isShowDropdown) {
+      if (!this.isShowDropdown && !this.isStatic) {
         const currentValue = this.checks[index];
         const nextValue = currentValue === 2 ? 0 : currentValue + 1;
         this.checks[index] = nextValue;
@@ -303,7 +293,7 @@ export default {
       }
     },
     onClickAllCheck: function() {
-      if (!this.isShowDropdown) {
+      if (!this.isShowDropdown && !this.isStatic) {
         const nextState = this.allCheckState === 2 ? 0 : this.allCheckState + 1;
         let result = {};
         Object.keys(this.checks).forEach(key => {
@@ -341,6 +331,11 @@ export default {
   margin: 0;
   border-bottom: 1px solid #eee;
   user-select: none;
+}
+
+.item-img-block {
+  position: relative;
+  cursor: pointer;
 }
 
 .item-img {

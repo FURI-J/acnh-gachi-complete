@@ -90,15 +90,15 @@
       </template>
     </infinite-loading>
     <div
-      v-if="isVersion"
+      v-if="isVersion && !isSearchMode"
       class="message"
       style="font-weight: 400; font-size: 12px;"
     >
-      バージョンカテゴリは、「素材」や「消費アイテム」、「植物」を含む、そのバージョンで追加されたすべてのアイテムを表示します。
+      バージョンカテゴリは、「素材」や「消費アイテム」、「植物」などコレクション要素がないアイテムを含む、そのバージョンで追加されたすべてのアイテムを表示します。
     </div>
     <Modal :show="isShowModal" @close="isShowModal = false">
       <template v-if="modalItem">
-        <template slot="header">{{ modalItem.displayName }}</template>
+        <template slot="header">{{ modalItemName }}</template>
         <div slot="body"><ItemModalContent :modalItem="modalItem" /></div>
       </template>
     </Modal>
@@ -113,7 +113,8 @@ import {
   filterItems,
   navs,
   totalLength,
-  collectedLength
+  collectedLength,
+  toDisplayItemName
 } from "../utils/nav.js";
 import { isAvailableFilter } from "../utils/filter";
 
@@ -187,6 +188,9 @@ export default {
     },
     islandName() {
       return this.$store.getters.islandName;
+    },
+    modalItemName() {
+      return toDisplayItemName(this.modalItem, this.islandName);
     },
     isVersion() {
       if (this.activeNav) {
@@ -278,6 +282,8 @@ export default {
         }
         this.changeNav(nav || "housewares-all");
       }
+
+      this.resetTypeFilter();
       this.updateNavOrder();
     },
     onChangeItemCheck: function(itemName, itemCollectedData) {
@@ -344,12 +350,7 @@ export default {
       this.$copyText(names);
     },
     onChangeNav() {
-      // Reset typeFilter
-      if (isAvailableFilter(this.activeNav, this.filter.typeFilter)) {
-        this.filter.typeFilter = "all";
-        this.$vlf.setItem("filter", this.filter);
-      }
-
+      this.resetTypeFilter();
       this.updateShowItems();
     },
     onChangeView: function() {
@@ -477,6 +478,12 @@ export default {
             return 0;
           });
         }
+      }
+    },
+    resetTypeFilter() {
+      if (isAvailableFilter(this.activeNav, this.filter.typeFilter)) {
+        this.filter.typeFilter = "all";
+        this.$vlf.setItem("filter", this.filter);
       }
     }
   }

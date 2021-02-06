@@ -392,6 +392,15 @@ export function filterItems(args) {
       else if (nav === "season-fireworks") {
         return item.seasonEvent === "Fireworks Show";
       }
+      // 季節・イベント (カーニバル)
+      else if (nav === "season-festivale") {
+        return (
+          item.seasonEvent &&
+          item.seasonEvent.includes("Festivale") &&
+          !item.diy &&
+          item.sourceSheet !== "Other"
+        );
+      }
       // 季節・イベント (はるのわかたけ)
       else if (nav === "season-spring") {
         return (
@@ -538,6 +547,10 @@ export function filterItems(args) {
       else if (nav === "versions-160") {
         return item.versionAdded === "1.6.0";
       }
+      // バージョン 1.7.0
+      else if (nav === "versions-170") {
+        return item.versionAdded === "1.7.0";
+      }
 
       return true;
     });
@@ -627,6 +640,20 @@ export function allCollectedLength(collected) {
   return calcCollectedLength(collected, collectedItems);
 }
 
+export function providableLength(args) {
+  const { collected, nav, typeFilter } = args;
+  const collectedItems = filterItems({
+    collected,
+    nav,
+    filter: {
+      typeFilter: typeFilter,
+      collectedFilter: "2"
+    }
+  });
+
+  return calcCollectedLength(collected, collectedItems);
+}
+
 export function getNavText(nav) {
   let navText = "";
   navs.forEach(link => {
@@ -638,4 +665,17 @@ export function getNavText(nav) {
     }
   });
   return navText;
+}
+
+export function toDisplayItemName(item, islandName) {
+  // 島名を置換
+  if (
+    islandName &&
+    (item.name === "(island name) Icons" ||
+      item.name === "(island name) Miles!")
+  ) {
+    return item.displayName.replace("○○", islandName);
+  } else {
+    return item.displayName;
+  }
 }
