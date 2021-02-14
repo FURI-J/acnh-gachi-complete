@@ -1,14 +1,6 @@
 const fs = require("fs");
-const {
-  hiraToKana,
-  hanEisuToZenEisu,
-  daku_conv,
-  choon_conv,
-  tsu_conv,
-  yoon_conv,
-  array_move,
-  numberWithCommas
-} = require("./utils.js");
+const { array_move, numberWithCommas } = require("./utils.js");
+const { convertForSorting, sortItemsByName } = require("./sort.js");
 
 //
 // Load Json
@@ -25,7 +17,9 @@ let allItems = [].concat(
 const translation = {
   itemName: require("../data/translation-json/item-name.json"),
   variantBody: require("../data/translation-json/variant-body.json"),
+  variantBodyTitle: require("../data/translation-json/variant-body-title.json"),
   variantPattern: require("../data/translation-json/variant-pattern.json"),
+  variantPatternTitle: require("../data/translation-json/variant-pattern-title.json"),
   variantFassion: require("../data/translation-json/variant-fassion.json"),
   reaction: require("../data/translation-json/reaction.json"),
   achievements: require("../data/translation-json/achievements.json"),
@@ -73,21 +67,25 @@ allItems.forEach(item => {
       }
     });
     item.customizeVariants = customizeVariants;
+    item.bodyTitle = translation.variantBodyTitle[item.variants[0].internalId];
+    if (!translation.variantBodyTitle[item.variants[0].internalId]) {
+      console.log(`NoCustomizeVariantTitle: ${item.name}`);
+    }
     item.variants.length = 1;
   }
 
   // Photos の 日本語リメイク名配列を追加とリメイクバリエーションの削除 (customizeVariants)
   if (item.sourceSheet === "Photos") {
-    item.customizeVariants = [
-      "ナチュラルウッド",
-      "ダークウッド",
-      "パステル",
-      "ホワイト",
-      "ポップ",
-      "カラフル",
-      "シルバー",
-      "ゴールド"
-    ];
+    // しゃしんはinternalIdの最小値6426(さくらじま)しか翻訳データが無い
+    const photoInternalId = "6426";
+    const customizeVariants = [];
+    for (let i = 0; i < item.variants.length; i++) {
+      customizeVariants.push(
+        translation.variantBody[photoInternalId + "_" + i]
+      );
+    }
+    item.customizeVariants = customizeVariants;
+    item.bodyTitle = translation.variantBodyTitle[photoInternalId];
     item.variants.length = 1;
   }
 
@@ -103,6 +101,11 @@ allItems.forEach(item => {
       translation.variantPattern[item.variants[0].internalId];
     if (!translation.variantPattern[item.variants[0].internalId]) {
       console.log(`NoPatternVariant: ${item.name}`);
+    }
+    item.patternTitle =
+      translation.variantPatternTitle[item.variants[0].internalId];
+    if (!translation.variantPatternTitle[item.variants[0].internalId]) {
+      console.log(`NoPatternVariantTitle: ${item.name}`);
     }
     item.variants = newVariants;
   }
@@ -121,6 +124,10 @@ allItems.forEach(item => {
       }
     });
     item.bodyVariants = bodyVariants;
+    item.bodyTitle = translation.variantBodyTitle[item.variants[0].internalId];
+    if (!translation.variantBodyTitle[item.variants[0].internalId]) {
+      console.log(`NoBodyVariantTitle: ${item.name}`);
+    }
     item.bodyCustomize = true;
     if (item.diy || item.catalog === "For sale" || item.catalog === true) {
       item.variants.length = 1;
@@ -132,9 +139,12 @@ allItems.forEach(item => {
   //
 
   if (item.sourceSheet === "Achievements") {
-    // displayName and description
+    // description
     item.achievementDescription =
       translation.achievements[item.internalId].desc;
+
+    // よみがな
+    item.yomigana = translation.achievements[item.internalId].yomi;
 
     // parseInt num
     item.num = parseInt(item.num, 10);
@@ -348,7 +358,6 @@ allItems.forEach(item => {
   delete item["numOfTiers"];
   delete item["outdoor"];
   delete item["paneType"];
-  delete item["patternTitle"];
   delete item["primaryShape"];
   delete item["recipesToUnlock"];
   delete item["seasonalAvailability"];
@@ -435,46 +444,8 @@ allItems = allItems.map(function(item) {
 // Sort items
 //
 
-function conversion(str) {
-  str = hiraToKana(str);
-  str = hanEisuToZenEisu(str);
-  str = tsu_conv(str);
-  str = choon_conv(str);
-  str = yoon_conv(str);
-  str = daku_conv(str);
-  return str;
-}
-
-// 日本語ソート
-allItems.sort(function(a, b) {
-  const ca = conversion(a.displayName);
-  const cb = conversion(b.displayName);
-  if (ca == cb) {
-    if (a.displayName == b.displayName) {
-      return 0;
-    } else if (a.displayName > b.displayName) {
-      return 1;
-    } else {
-      return -1;
-    }
-  } else if (ca > cb) {
-    return 1;
-  } else {
-    return -1;
-  }
-});
-
-// 数字で始まるアイテムを先頭に持ってくる（例：１ごうのしゃしん）
-allItems.sort(function(a, b) {
-  const isAlfabetA = a.displayName.slice(0, 1).match(/[^0-9０-９]/gi);
-  const isAlfabetB = b.displayName.slice(0, 1).match(/[^0-9０-９]/gi);
-  if (!isAlfabetA && isAlfabetB) {
-    return -1;
-  }
-  if (isAlfabetA && !isAlfabetB) {
-    return 1;
-  }
-  return 0;
+sortItemsByName(allItems, item => {
+  return convertForSorting(item.yomigana || item.displayName);
 });
 
 //

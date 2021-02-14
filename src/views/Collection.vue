@@ -96,10 +96,18 @@
     >
       バージョンカテゴリは、「素材」や「消費アイテム」、「植物」などコレクション要素がないアイテムを含む、そのバージョンで追加されたすべてのアイテムを表示します。
     </div>
-    <Modal :show="isShowModal" @close="isShowModal = false">
+    <Modal :show="isShowModal" @close="isShowModal = false" closeButton>
       <template v-if="modalItem">
         <template slot="header">{{ modalItemName }}</template>
-        <div slot="body"><ItemModalContent :modalItem="modalItem" /></div>
+        <div slot="body">
+          <ItemModalContent
+            :modalItem="modalItem"
+            :modalBodyIndex="modalBodyIndex"
+            :modalPatternIndex="modalPatternIndex"
+            @updateModalBodyIndex="modalBodyIndex = $event"
+            @updateModalPatternIndex="modalPatternIndex = $event"
+          />
+        </div>
       </template>
     </Modal>
     <portal-target name="shareModal"></portal-target>
@@ -166,7 +174,9 @@ export default {
       navs: navs,
       isOpenLogin: false,
       isShowModal: false,
-      modalItem: null,
+      modalItem: {},
+      modalBodyIndex: 0,
+      modalPatternIndex: 0,
       pins: {}
     };
   },
@@ -221,12 +231,26 @@ export default {
     }
   },
   watch: {
-    activeNav() {
-      this.onChangeNav();
+    activeNav(newValue, oldValue) {
+      if (oldValue !== null) {
+        this.onChangeNav();
+      }
+    },
+    islandName(newValue, oldValue) {
+      // たぬきマイレージのみ島名反映後にソートさせたいため表示更新
+      if (
+        oldValue !== null &&
+        this.activeNav === "achievements" &&
+        this.filter &&
+        this.filter.order === "name"
+      ) {
+        this.updateShowItems();
+      }
     }
   },
   async mounted() {
     await this.initNavFilter();
+    await this.initIslandName();
     this.updateShowItems();
   },
   methods: {
@@ -285,6 +309,10 @@ export default {
 
       this.resetTypeFilter();
       this.updateNavOrder();
+    },
+    async initIslandName() {
+      const islandName = await this.$vlf.getItem("islandName");
+      this.$store.commit("updateIslandName", islandName);
     },
     onChangeItemCheck: function(itemName, itemCollectedData) {
       this.$store.commit("updateLocalCollectedDataByItem", {
@@ -377,9 +405,11 @@ export default {
       this.searchText = text;
       this.updateShowItems();
     },
-    onShowModal: function(item) {
-      this.isShowModal = true;
+    onShowModal: function(item, index) {
+      this.modalBodyIndex = index;
+      this.modalPatternIndex = 0;
       this.modalItem = item;
+      this.isShowModal = true;
     },
     changeNav(nav) {
       this.$store.commit("changeNav", nav);
@@ -405,7 +435,8 @@ export default {
         nav: this.activeNav,
         filter: this.filter,
         isSearchMode: this.isSearchMode,
-        searchText: this.searchText
+        searchText: this.searchText,
+        islandName: this.islandName
       });
 
       // 表示対象バリエーションのインデックスを保持する
