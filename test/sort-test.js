@@ -17,14 +17,14 @@ const fs = require("fs");
     list.push(item.displayName);
   });
 
-  fs.writeFileSync("./test/displayName_gachi.txt", list.join("\n"));
+  fs.writeFileSync("./test/result/sort-test-gachi.txt", list.join("\n"));
 })();
 
-// ItemStrSortに従ったソート結果でアイテム名一覧を出力
+// ItemStrSort.bcsvに従ったソート結果でアイテム名一覧を出力
 (() => {
   const csvParse = require("csv-parse/lib/sync");
 
-  const content = fs.readFileSync(`./test/ItemStrSort.csv`);
+  const content = fs.readFileSync(`./test/data/ItemStrSort.csv`);
   const contentArray = csvParse(content, {
     from_line: 2,
     delimiter: ",",
@@ -91,5 +91,5 @@ const fs = require("fs");
   items.forEach(item => {
     list.push(item.displayName);
   });
-  fs.writeFileSync("./test/displayName_sort.txt", list.join("\n"));
+  fs.writeFileSync("./test/result/sort-test-bcsv.txt", list.join("\n"));
 })();
