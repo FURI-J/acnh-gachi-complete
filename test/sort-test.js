@@ -22,18 +22,10 @@ const fs = require("fs");
 
 // ItemStrSort.bcsvに従ったソート結果でアイテム名一覧を出力
 (() => {
-  const csvParse = require("csv-parse/lib/sync");
-
-  const content = fs.readFileSync(`./test/data/ItemStrSort.csv`);
-  const contentArray = csvParse(content, {
-    from_line: 2,
-    delimiter: ",",
-    quote: false
-  });
-
+  const itemStrSort = require("./data/ItemStrSort.json");
   const sortKeys = {};
-  contentArray.forEach(row => {
-    sortKeys[row[14]] = row[8];
+  itemStrSort.forEach(row => {
+    sortKeys[row.UniqueID] = row.StrSortIdJPja;
   });
 
   const items = [].concat(
