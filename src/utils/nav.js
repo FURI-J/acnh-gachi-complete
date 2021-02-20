@@ -23,7 +23,7 @@ const normalizeText = function(string) {
   return result;
 };
 
-// たぬきマイレージ：島名を置換
+// たぬきマイレージ：名前順ソート時の島名置換
 const replaceIslandName = function(itemName, item, islandName) {
   if (islandName && hasIslandName(item)) {
     // 島名を置換
@@ -137,8 +137,8 @@ export function filterItems(args) {
     });
     // 島名を含む場合は名前順でソート
     if (islandName && items.some(item => hasIslandName(item))) {
-      sortItemsByName(items, (itenName, item) => {
-        return replaceIslandName(itenName, item, islandName);
+      sortItemsByName(items, (itemName, item) => {
+        return replaceIslandName(itemName, item, islandName);
       });
     }
   } else {
@@ -633,8 +633,8 @@ export function filterItems(args) {
     //
 
     if (nav === "achievements" && filter.order === "name") {
-      sortItemsByName(items, (itenName, item) => {
-        return replaceIslandName(itenName, item, islandName);
+      sortItemsByName(items, (itemName, item) => {
+        return replaceIslandName(itemName, item, islandName);
       });
     }
   }
