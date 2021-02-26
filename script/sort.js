@@ -48,48 +48,54 @@ function choon_conv(str) {
 }
 
 function sutegana_conv(str) {
-  str = str.replace("ァ", "ア");
-  str = str.replace("ィ", "イ");
-  str = str.replace("ゥ", "ウ");
-  str = str.replace("ェ", "エ");
-  str = str.replace("ォ", "オ");
-  str = str.replace("ッ", "ツ");
-  str = str.replace("ャ", "ヤ");
-  str = str.replace("ュ", "ユ");
-  str = str.replace("ョ", "ヨ");
-  str = str.replace("ヮ", "ワ");
+  str = str.replace(/ァ/g, "ア");
+  str = str.replace(/ィ/g, "イ");
+  str = str.replace(/ゥ/g, "ウ");
+  str = str.replace(/ェ/g, "エ");
+  str = str.replace(/ォ/g, "オ");
+  str = str.replace(/ッ/g, "ツ");
+  str = str.replace(/ャ/g, "ヤ");
+  str = str.replace(/ュ/g, "ユ");
+  str = str.replace(/ョ/g, "ヨ");
+  str = str.replace(/ヮ/g, "ワ");
+  str = str.replace(/ヵ/g, "カ");
+  str = str.replace(/ヶ/g, "ケ");
   return str;
 }
 
 function symbol_conv(str) {
-  return str.replace(/[^\u0020-\u007D〓ァ-ヶＡ-Ｚａ-ｚ]/g, "");
-}
-
-function convertForSorting(str) {
-  // ひらがな⇒カタカナ
-  str = kana_conv(str);
-  // 数字⇒半角、アルファベット⇒全角
-  str = zen_han_conv(str);
-  // 長音変換（ポスター⇒ポスタア）
-  str = choon_conv(str);
-  // 捨て仮名変換（ッ⇒ツ）
-  str = sutegana_conv(str);
-  // 濁点削除（ブドウ⇒フトウ）
-  str = daku_conv(str);
-  // 中黒（・）などの全角記号削除（島名読み仮名の〓は削除しない）
-  str = symbol_conv(str);
   return str;
+  //return str.replace(/[^\u0020-\u007D〓ァ-ヶＡ-Ｚａ-ｚ]/g, "");
 }
 
 module.exports = {
-  sortItemsByName: function(items, converter) {
+  convertForSorting: function(str) {
+    // ひらがな⇒カタカナ
+    str = kana_conv(str);
+    // 数字⇒半角、アルファベット⇒全角
+    str = zen_han_conv(str);
+    // 長音変換（ポスター⇒ポスタア）
+    str = choon_conv(str);
+    // 捨て仮名変換（ッ⇒ツ）
+    str = sutegana_conv(str);
+    // 濁点削除（ブドウ⇒フトウ）
+    str = daku_conv(str);
+    // 中黒（・）などの全角記号削除（島名読み仮名の〓は削除しない）
+    str = symbol_conv(str);
+    return str;
+  },
+  sortItemsByName: function(items, sjisTable, converter) {
     items.sort(function(a, b) {
       // 変換前
       const oa = a.yomigana || a.displayName;
       const ob = b.yomigana || b.displayName;
       // 変換後
-      const ca = convertForSorting(converter ? converter(oa, a) : oa);
-      const cb = convertForSorting(converter ? converter(ob, b) : ob);
+      const ca = module.exports.convertForSorting(
+        converter ? converter(oa, a) : oa
+      );
+      const cb = module.exports.convertForSorting(
+        converter ? converter(ob, b) : ob
+      );
       // 1文字単位で判定
       for (let i = 0; i < ca.length; ) {
         if (i === cb.length) {
@@ -109,12 +115,31 @@ module.exports = {
           } else {
             i += na.toString(10).length;
           }
-        } else if (sa > sb) {
-          return 1;
-        } else if (sa < sb) {
-          return -1;
         } else {
-          i++;
+          // SJISコード順で比較
+          // ただし、nav.jsでのソート時は島名に何が入るかわからないので、SJISコード不明時はUnicodeで比較
+          const ja = sjisTable[sa];
+          const jb = sjisTable[sb];
+          if (!converter) {
+            // gen-json.jsでのソート時はSJISコードは必ず定義されているはずなのでエラーログを出力
+            if (!ja) {
+              console.log("NoSjis:" + ca);
+            }
+            if (!jb) {
+              console.log("NoSjis:" + sb);
+            }
+          }
+          if (ja && jb && ja > jb) {
+            return 1;
+          } else if (ja && jb && ja < jb) {
+            return -1;
+          } else if (sa > sb) {
+            return 1;
+          } else if (sa < sb) {
+            return -1;
+          } else {
+            i++;
+          }
         }
       }
       if (ca.length < cb.length) {

@@ -1,6 +1,7 @@
 const fs = require("fs");
 const { array_move, numberWithCommas } = require("./utils.js");
-const { convertForSorting, sortItemsByName } = require("./sort.js");
+const { genSjisTable } = require("./sjis.js");
+const { sortItemsByName } = require("./sort.js");
 
 //
 // Load Json
@@ -440,11 +441,13 @@ allItems = allItems.map(function(item) {
   return newItem;
 });
 
+const sjisTable = genSjisTable(allItems);
+
 //
 // Sort items
 //
 
-sortItemsByName(allItems);
+sortItemsByName(allItems, sjisTable);
 
 //
 // Write file
